@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My Daily Routine — Interactive Worksheet</title>
+  <style>
+    :root{--bg1:#FFF6FB;--bg2:#F3F6FF;--accent1:#E8C8F2;--accent2:#FFDDE6;--cloud:#FFF2FA;--text:#333;--muted:#6b6b6b;--shadow:0 10px 30px rgba(128,88,160,0.12);--ok:#8edfaf;--bad:#f5a8a8;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial}
+    html,body{height:100%;margin:0;background:linear-gradient(160deg,var(--bg1),var(--bg2));color:var(--text);-webkit-font-smoothing:antialiased}
+
+    /* decorative static clouds & sparkles background for worksheet */
+    .bg-decor{position:fixed;inset:0;pointer-events:none;z-index:0}
+    .cloud{position:absolute;background:radial-gradient(closest-side, rgba(255,255,255,0.95), rgba(255,255,255,0.6));filter:blur(20px);opacity:0.7}
+    .sparkle{position:absolute;width:6px;height:6px;border-radius:50%;background:radial-gradient(circle, rgba(255,255,255,0.95), rgba(255,255,255,0.6));opacity:0.6}
+
+    /* Cover */
+    .cover{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;background:linear-gradient(135deg,#FFEAF3,#E6D7FF);overflow:hidden;transition:opacity .8s ease;position:relative}
+    h1{margin:12px 0 6px;font-size:36px;color:#5C3A79;z-index:2}
+    .subtitle{margin:6px 0 16px;color:#6b4d7a;font-size:15px;z-index:2}
+
+    /* Banner 40% width, soft edges, subtle glow, small sway */
+    .banner-wrap{width:40%;max-width:560px;border-radius:12px;overflow:visible;box-shadow:0 18px 44px rgba(150,100,180,0.12);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+    .banner{width:100%;border-radius:10px;overflow:hidden;position:relative}
+    .banner img{display:block;width:100%;height:auto;display:block;filter:drop-shadow(0 12px 28px rgba(140,90,170,0.08));transition:transform .9s ease,filter .5s;background:transparent}
+    /* soften edges via mask (creates smooth fade to transparent around edges) */
+    .banner img{mask-image:radial-gradient(ellipse at center, black 92%, transparent 100%);-webkit-mask-image:radial-gradient(ellipse at center, black 92%, transparent 100%)}
+    .banner.sway img{animation:sway 7s ease-in-out infinite}
+    @keyframes sway{0%{transform:rotate(-1deg) translateY(0)}50%{transform:rotate(1deg) translateY(3px)}100%{transform:rotate(-1deg) translateY(0)}}
+
+    .btn-start{background:linear-gradient(90deg,var(--accent1),var(--accent2));border:none;padding:12px 22px;border-radius:20px;font-size:16px;color:#3b2b58;cursor:pointer;box-shadow:0 8px 20px rgba(190,140,200,0.12);transition:transform .35s;z-index:2}
+    .btn-start:hover{transform:translateY(-6px)}
+
+    /* Worksheet container */
+    .container{max-width:980px;margin:28px auto;padding:22px;opacity:0;visibility:hidden;transition:opacity .8s ease,visibility .8s;position:relative;z-index:1}
+    .container.visible{opacity:1;visibility:visible}
+    .card{background:rgba(255,255,255,0.98);border-radius:14px;padding:18px;margin-top:18px;box-shadow:var(--shadow);transition:transform .3s}
+    .section-title{display:flex;align-items:center;gap:12px;margin:0 0 12px}
+    .section-title h2{margin:0;font-size:18px;color:#6a3b6a}
+    .section-title .icon{width:34px;height:34px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(90deg,rgba(232,200,242,0.12),rgba(255,221,230,0.06));box-shadow:0 6px 12px rgba(200,170,210,0.04)}
+
+    .text-block{line-height:1.6;padding:12px;border-radius:10px;background:linear-gradient(90deg,rgba(232,200,242,0.12),rgba(255,221,230,0.08))}
+    .cloud-input{background:var(--cloud);border-radius:14px;padding:12px;border:1px solid rgba(200,180,200,0.35);box-shadow:0 6px 12px rgba(200,170,210,0.04)}
+    input[type=text],textarea{width:100%;padding:8px;border-radius:10px;border:1px solid rgba(200,180,200,0.35);outline:none;font-size:14px}
+    textarea{min-height:70px}
+
+    /* True/False */
+    .tf-list{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .tf-item{display:flex;align-items:center;gap:8px;padding:10px;border-radius:12px;background:linear-gradient(90deg,rgba(255,255,255,0.88),rgba(255,255,255,0.98));transition:background .35s,border-color .35s}
+    .tf-item.correct{background:linear-gradient(90deg,#f0fbf6,#d9f3e0);border:1px solid var(--ok)}
+    .tf-item.wrong{background:linear-gradient(90deg,#fff3f3,#ffe5e5);border:1px solid var(--bad)}
+
+    input.marked.correct{background:#f0fbf6;border-color:var(--ok);transition:background .35s,border-color .35s}
+    input.marked.wrong{background:#fff3f3;border-color:var(--bad);transition:background .35s,border-color .35s}
+    textarea.marked.correct{background:#f0fbf6;border-color:var(--ok)}
+    textarea.marked.wrong{background:#fff3f3;border-color:var(--bad)}
+
+    .vocab-card{padding:12px;border-radius:12px;background:linear-gradient(90deg,rgba(232,200,242,0.06),rgba(255,221,230,0.04));}
+    .check-btn{background:#6a3b6a;color:white;border:none;padding:8px 12px;border-radius:10px;cursor:pointer;margin-top:12px;box-shadow:0 6px 16px rgba(110,60,110,0.12)}
+    .check-btn:active{transform:scale(.98)}
+
+    /* heart animation */
+    .heart{position:absolute;font-size:18px;pointer-events:none;transform:translate(-50%,0);opacity:0;animation:heartUp 1.2s ease forwards}
+    @keyframes heartUp{0%{transform:translate(-50%,0) scale(0.6);opacity:0}20%{opacity:1;transform:translate(-50%,-6px) scale(1.05)}100%{transform:translate(-50%,-40px) scale(0.9);opacity:0}}
+
+    /* message */
+    .message{position:fixed;left:50%;transform:translateX(-50%);top:18px;padding:12px 18px;border-radius:12px;display:none;box-shadow:0 6px 20px rgba(0,0,0,0.12);font-weight:700}
+    .message.good{background:linear-gradient(90deg,#daf5e5,#b8efcf);color:#145c35}
+    .message.bad{background:linear-gradient(90deg,#ffdfe0,#ffbdbd);color:#7a1d1d}
+
+    .controls{display:flex;gap:8px;justify-content:center;margin-top:14px}
+    .reset-btn{background:transparent;border:2px solid #d9c0e8;color:#5c3a79;padding:8px 14px;border-radius:10px;cursor:pointer}
+    footer{display:flex;justify-content:space-between;align-items:center;padding:12px;margin-top:18px;color:var(--muted);font-size:13px}
+
+    @media(max-width:820px){.banner-wrap{width:70%}.tf-list{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <!-- decorative static background -->
+  <div class="bg-decor" aria-hidden="true">
+    <div class="cloud" style="width:320px;height:120px;left:6%;top:8%;opacity:0.12"></div>
+    <div class="cloud" style="width:240px;height:90px;right:8%;top:14%;opacity:0.12"></div>
+    <div class="cloud" style="width:180px;height:70px;left:18%;bottom:10%;opacity:0.08"></div>
+    <div class="sparkle" style="left:30%;top:22%;opacity:0.08"></div>
+    <div class="sparkle" style="left:68%;top:36%;opacity:0.06"></div>
+    <div class="sparkle" style="left:50%;top:60%;opacity:0.04"></div>
+  </div>
+
+  <!-- Cover -->
+  <section class="cover" id="cover">
+    <div class="banner-wrap">
+      <div class="banner sway" id="banner">
+        <!-- banner image: we apply mask to soften / fade edges, giving the appearance of removed background -->
+        <img id="bannerImg" src="https://sh-kalininskaya-r64.gosweb.gosuslugi.ru/netcat_files/177/3742/9Z3OLmBpM5IsodXMlOei3Q6YK2FPHc5BEARbJyJuTBOIGhssm2iPHUkYGhjbfSDHpFeUgMQnrwFVMD1VyiGXGy95.jpg" alt="Dancer banner"/>
+      </div>
+    </div>
+    <h1>🩰 My Daily Routine</h1>
+    <p class="subtitle">Interactive Worksheet for Young Dancers (Level A2)</p>
+    <button class="btn-start" id="startBtn">Start Worksheet</button>
+  </section>
+
+  <!-- Worksheet -->
+  <div class="container" id="worksheet" aria-hidden="true">
+
+    <!-- Page 1: Text -->
+    <section id="page1" class="card">
+      <div class="section-title"><div class="icon" aria-hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l2 6h6l-5 4 2 6-5-4-5 4 2-6L4 8h6l2-6z" fill="#E8C8F2"/></svg></div><h2>💬 Read the text</h2></div>
+      <div class="text-block" id="text">
+        <strong>My Daily Routine</strong><br/><br/>
+        My name is Anna, and I am eleven years old. I <strong>usually</strong> get up at seven o’clock in the morning. I <strong>always</strong> wash my face, brush my teeth, and get dressed. Then I <strong>usually</strong> have breakfast with my family. After that, I go to school at half past seven. My classes start at half past eight. I always try to be on time. I often like English and music lessons the most.<br/><br/>
+        I usually come home at two o’clock in the afternoon and have lunch. Then I sometimes do my homework right away. In the evening, I always go to ballroom dance practice. I love dancing and learning new steps. After training, I usually take a shower and have dinner. Before going to bed, I sometimes scroll Pinterest and look at pictures. I usually go to sleep at ten o’clock.<br/><br/>
+        At the weekend, I usually get up later. But sometimes I get up early because I go to dance competitions. I often meet my friends or go for a walk with my family. Sometimes I watch movies or bake cookies with my mom. I never get bored because my weekends are always fun and exciting.
+      </div>
+    </section>
+
+    <!-- Page 2: True/False -->
+    <section id="page2" class="card">
+      <div class="section-title"><div class="icon" aria-hidden><svg width="20" height="20" viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" fill="#FFDDE6"/></svg></div><h2>✅ True or False</h2></div>
+      <p style="color:var(--muted)">Read the statements and choose True (T) or False (F). Then press <strong>Check</strong>.</p>
+      <div class="tf-list" id="tf-list">
+        <div class="tf-item" data-answer="T"><label>1. Anna is eleven years old.</label><div><label><input type="radio" name="tf1" value="T"> T</label> <label><input type="radio" name="tf1" value="F"> F</label></div></div>
+        <div class="tf-item" data-answer="F"><label>2. She usually gets up at half past eight.</label><div><label><input type="radio" name="tf2" value="T"> T</label> <label><input type="radio" name="tf2" value="F"> F</label></div></div>
+        <div class="tf-item" data-answer="T"><label>3. She has breakfast with her family.</label><div><label><input type="radio" name="tf3" value="T"> T</label> <label><input type="radio" name="tf3" value="F"> F</label></div></div>
+        <div class="tf-item" data-answer="T"><label>4. Anna’s classes start at half past eight.</label><div><label><input type="radio" name="tf4" value="T"> T</label> <label><input type="radio" name="tf4" value="F"> F</label></div></div>
+        <div class="tf-item" data-answer="F"><label>5. She doesn’t like English lessons.</label><div><label><input type="radio" name="tf5" value="T"> T</label> <label><input type="radio" name="tf5" value="F"> F</label></div></div>
+        <div class="tf-item" data-answer="T"><label>6. She always goes to ballroom dance practice in the evening.</label><div><label><input type="radio" name="tf6" value="T"> T</label> <label><input type="radio" name="tf6" value="F"> F</label></div></div>
+        <div class="tf-item" data-answer="T"><label>7. After training, she takes a shower and has dinner.</label><div><label><input type="radio" name="tf7" value="T"> T</label> <label><input type="radio" name="tf7" value="F"> F</label></div></div>
+        <div class="tf-item" data-answer="F"><label>8. Before going to bed, she plays computer games.</label><div><label><input type="radio" name="tf8" value="T"> T</label> <label><input type="radio" name="tf8" value="F"> F</label></div></div>
+        <div class="tf-item" data-answer="T"><label>9. At the weekend, she sometimes gets up early to go to competitions.</label><div><label><input type="radio" name="tf9" value="T"> T</label> <label><input type="radio" name="tf9" value="F"> F</label></div></div>
+        <div class="tf-item" data-answer="T"><label>10. She never gets bored on the weekend.</label><div><label><input type="radio" name="tf10" value="T"> T</label> <label><input type="radio" name="tf10" value="F"> F</label></div></div>
+      </div>
+      <div class="controls"><button class="check-btn" onclick="checkTF()">Check</button></div>
+    </section>
+
+    <!-- Page 3: Questions -->
+    <section id="page3" class="card">
+      <div class="section-title"><div class="icon" aria-hidden><svg width="20" height="20" viewBox="0 0 24 24"><path d="M4 4h16v2H4zM4 8h10v2H4zM4 12h16v2H4z" fill="#FFEAF3"/></svg></div><h2>✏️ Answer the Questions</h2></div>
+      <div class="cloud-input">
+        <label>1. How old is Anna?<textarea id="q1"></textarea></label>
+        <label>2. What time does she usually get up?<textarea id="q2"></textarea></label>
+        <label>3. What lessons does she like the most?<textarea id="q3"></textarea></label>
+        <label>4. What does she do in the evening?<textarea id="q4"></textarea></label>
+        <label>5. What does she do before going to bed?<textarea id="q5"></textarea></label>
+        <label>6. What time does she usually go to sleep?<textarea id="q6"></textarea></label>
+        <label>7. What does she sometimes do at the weekend?<textarea id="q7"></textarea></label>
+        <label>8. Why does she sometimes get up early on weekends?<textarea id="q8"></textarea></label>
+      </div>
+      <div class="controls"><button class="check-btn" onclick="checkQuestions()">Check</button></div>
+    </section>
+
+    <!-- Page 4: Vocabulary -->
+    <section id="page4" class="card">
+      <div class="section-title"><div class="icon" aria-hidden><svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 2L4 5v6c0 5 4 9 8 9s8-4 8-9V5l-8-3z" fill="#FDE8F2"/></svg></div><h2>🧩 Vocabulary Practice</h2></div>
+      <div class="vocab-card cloud-input">
+        <strong>A. Match the words and meanings</strong>
+        <ol>
+          <li>to get up — <input type="text" id="m1" placeholder="letter"></li>
+          <li>to do homework — <input type="text" id="m2" placeholder="letter"></li>
+          <li>practice — <input type="text" id="m3" placeholder="letter"></li>
+          <li>competition — <input type="text" id="m4" placeholder="letter"></li>
+          <li>to take a shower — <input type="text" id="m5" placeholder="letter"></li>
+          <li>to go to sleep — <input type="text" id="m6" placeholder="letter"></li>
+          <li>weekend — <input type="text" id="m7" placeholder="letter"></li>
+        </ol>
+        <div style="margin-top:8px">
+          <strong>Meanings</strong>
+          <ol>
+            <li>a) to wash your body under running water</li>
+            <li>b) the time when you don’t go to school, usually Saturday and Sunday</li>
+            <li>c) to rise from bed</li>
+            <li>d) to rest at night</li>
+            <li>e) to prepare for something by repeating it</li>
+            <li>f) to study or write school tasks at home</li>
+            <li>g) a contest between people or teams</li>
+          </ol>
+        </div>
+        <div style="margin-top:12px"><strong>B. Fill in the blanks</strong>
+          <div style="margin-top:8px">
+            1. Anna always takes a <input type="text" id="f1" placeholder="..."> after training.<br>
+            2. She usually <input type="text" id="f2" placeholder="..."> at seven o’clock in the morning.<br>
+            3. She does her <input type="text" id="f3" placeholder="..."> in the afternoon.<br>
+            4. Ballroom dancers often go to <input type="text" id="f4" placeholder="..."> at the <input type="text" id="f5" placeholder="...">.<br>
+            5. After training, she has <input type="text" id="f6" placeholder="..."> with her family.
+          </div>
+        </div>
+      </div>
+      <div class="controls"><button class="check-btn" onclick="checkVocab()">Check</button></div>
+    </section>
+
+    <!-- Page 5: Grammar -->
+    <section id="page5" class="card">
+      <div class="section-title"><div class="icon" aria-hidden><svg width="20" height="20" viewBox="0 0 24 24"><path d="M3 6h18v2H3zM3 11h12v2H3zM3 16h18v2H3z" fill="#FFEAF3"/></svg></div><h2>💭 Grammar: Present Simple</h2></div>
+      <div class="cloud-input">
+        <strong>A. Complete the sentences</strong>
+        <ol>
+          <li>Anna <input type="text" id="g1" placeholder="..."> (get up) at seven o’clock.</li>
+          <li>She <input type="text" id="g2" placeholder="..."> (go) to school at half past seven.</li>
+          <li>Her classes <input type="text" id="g3" placeholder="..."> (start) at half past eight.</li>
+          <li>She <input type="text" id="g4" placeholder="..."> (love) ballroom dancing.</li>
+          <li>After training, she <input type="text" id="g5" placeholder="..."> (take) a shower and <input type="text" id="g6" placeholder="..."> (have) dinner.</li>
+          <li>At the weekend, she sometimes <input type="text" id="g7" placeholder="..."> (travel) to competitions.</li>
+          <li>Anna <input type="text" id="g8" placeholder="..."> (not / get up) late when she has a competition.</li>
+        </ol>
+      </div>
+      <div class="controls"><button class="check-btn" onclick="checkGrammar()">Check</button></div>
+    </section>
+
+    <!-- Page 6: Adverbs -->
+    <section id="page6" class="card">
+      <div class="section-title"><div class="icon" aria-hidden><svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 2l2 6h6l-5 4 2 6-5-4-5 4 2-6L4 8h6l2-6z" fill="#FDE8F2"/></svg></div><h2>⏰ Adverbs of Frequency</h2></div>
+      <div class="cloud-input">
+        <strong>A. Put the adverb in the correct place</strong>
+        <ol>
+          <li>She <input type="text" id="a1" placeholder="..."> goes to school at half past seven.</li>
+          <li>She <input type="text" id="a2" placeholder="..."> is late for her lessons.</li>
+          <li>She <input type="text" id="a3" placeholder="..."> dances in the evening.</li>
+          <li>She <input type="text" id="a4" placeholder="..."> scrolls Pinterest before going to bed.</li>
+          <li>She <input type="text" id="a5" placeholder="..."> gets up early on Sunday.</li>
+          <li>She <input type="text" id="a6" placeholder="..."> eats breakfast with her family.</li>
+        </ol>
+        <div style="margin-top:12px"><strong>B. Write about yourself</strong>
+          <textarea id="self" placeholder="I usually..."></textarea>
+        </div>
+      </div>
+      <div class="controls"><button class="check-btn" onclick="checkAdverbs()">Check</button></div>
+    </section>
+
+    <!-- Page 7: Goals -->
+    <section id="page7" class="card">
+      <div class="section-title"><div class="icon" aria-hidden><svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 21s-6-4-10-8l2-6 8-3 8 3 2 6c-4 4-10 8-10 8z" fill="#FDE8F2"/></svg></div><h2>🩰 My Dance Goals</h2></div>
+      <div class="cloud-input">
+        <p style="color:var(--muted)">Use the prompts to write your goals.</p>
+        <label>• I want to learn...<input type="text" id="goal1" placeholder="e.g. a new step"></label>
+        <label>• I dream to dance in...<input type="text" id="goal2" placeholder="e.g. a big competition"></label>
+        <label>• My favourite dance is...<input type="text" id="goal3" placeholder="e.g. waltz"></label>
+        <label>• My practice plan: <textarea id="plan" placeholder="e.g. practice 3 times a week"></textarea></label>
+      </div>
+    </section>
+
+    <!-- Page 8: Fun Facts + Reset -->
+    <section id="page8" class="card">
+      <div class="section-title"><div class="icon" aria-hidden><svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 2l2 6h6l-5 4 2 6-5-4-5 4 2-6L4 8h6l2-6z" fill="#FDE8F2"/></svg></div><h2>💡 Fun Facts about Ballroom Dancing</h2></div>
+      <div class="text-block">
+        • Ballroom dancing began many years ago in Europe and became popular all over the world.<br>
+        • Dancers often train for many hours and wear special shoes to help them move smoothly.<br>
+        • Competitions are exciting: dancers perform in pairs and judges give points for technique and style.
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
+        <button class="check-btn" onclick="checkAll()">Check All Answers</button>
+        <button class="reset-btn" onclick="resetAll()">Reset</button>
+      </div>
+    </section>
+
+    <div class="message" id="message"></div>
+    <footer><div>Made with ♥ for young dancers</div><div></div></footer>
+  </div>
+
+  <script>
+    // small click sound using WebAudio
+    let audioCtx = null;
+    function playClick(){
+      try{
+        if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'square';
+        o.frequency.value = 1000;
+        g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.08, audioCtx.currentTime + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.11);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + 0.12);
+      }catch(e){/* ignore */}
+    }
+
+    // helper to place and animate heart
+    function showHeart(x,y,parent){
+      const heart = document.createElement('div'); heart.className='heart'; heart.textContent='💖';
+      heart.style.left = x + 'px'; heart.style.top = y + 'px'; parent.appendChild(heart);
+      setTimeout(()=>{ heart.remove(); },1200);
+    }
+
+    function highlightField(el,ok){
+      if(!el) return;
+      el.classList.remove('marked','correct','wrong');
+      el.classList.add('marked');
+      if(ok) el.classList.add('correct'); else el.classList.add('wrong');
+    }
+
+    function mark(el, ok){
+      if(!el) return;
+      // for tf-item (container)
+      if(el.classList && el.classList.contains('tf-item')){
+        el.classList.remove('correct','wrong');
+        el.classList.add(ok?'correct':'wrong');
+        if(ok){ const rect = el.getBoundingClientRect(); showHeart(rect.left + rect.width*0.9, rect.top + 10, document.body); }
+      } else {
+        // input or textarea
+        if(el.tagName==='TEXTAREA' || el.tagName==='INPUT'){
+          el.classList.remove('correct','wrong');
+          el.classList.add(ok?'correct':'wrong');
+          if(ok){ const rect = el.getBoundingClientRect(); showHeart(rect.left + rect.width - 12, rect.top - 6, document.body); }
+        } else if(el.parentElement) {
+          el.parentElement.classList.remove('correct','wrong');
+          el.parentElement.classList.add(ok?'correct':'wrong');
+          if(ok){ const rect = el.parentElement.getBoundingClientRect(); showHeart(rect.left + rect.width - 12, rect.top - 6, document.body); }
+        }
+      }
+    }
+
+    // fade cover -> worksheet
+    const cover = document.getElementById('cover');
+    const startBtn = document.getElementById('startBtn');
+    const worksheet = document.getElementById('worksheet');
+    startBtn.addEventListener('click', ()=>{
+      playClick();
+      cover.style.opacity = 0; setTimeout(()=>{ cover.style.display='none'; worksheet.classList.add('visible'); worksheet.setAttribute('aria-hidden','false'); window.scrollTo(0,0); },600);
+    });
+
+    // Check TF
+    function checkTF(){ playClick(); const items = document.querySelectorAll('#tf-list .tf-item'); let correct=0,total=items.length; items.forEach(item=>{ const ans = item.getAttribute('data-answer'); const radios = item.querySelectorAll('input[type=radio]'); let chosen=null; radios.forEach(r=>{ if(r.checked) chosen=r.value; }); const ok = chosen===ans; mark(item,ok); if(ok) correct++; }); showMsg(`${correct} of ${total} True/False correct`, correct===total); }
+
+    // Questions simple keyword check
+    const qKeys = {q1:['eleven','11'],q2:['seven','7','7:00','7 o’clock','7 oclock'],q3:['english','music'],q4:['dance','practice','ballroom'],q5:['pinterest','picture','pictures','scroll'],q6:['ten','10','10:00','10 o’clock','10 oclock'],q7:['movies','bake','cookies','meet','friends','walk'],q8:['competition','competitions','early']};
+    function checkQuestions(){ playClick(); let correct=0,total=0; for(const id in qKeys){ total++; const el=document.getElementById(id); const v=(el.value||'').toLowerCase(); const ok=qKeys[id].some(k=>v.includes(k)); mark(el,ok); if(ok) correct++; } showMsg(`${correct} of ${total} questions correct`, correct===total); }
+
+    // Vocab
+    const vocabAnswers = {m1:'c',m2:'f',m3:'e',m4:'g',m5:'a',m6:'d',m7:'b'};
+    function checkVocab(){ playClick(); let correct=0,total=0; Object.keys(vocabAnswers).forEach(id=>{ total++; const el=document.getElementById(id); const v=(el.value||'').trim().toLowerCase(); const ok=v===vocabAnswers[id]; mark(el,ok); if(ok) correct++; }); const fillAnswers={f1:'shower',f2:'get up',f3:'homework',f4:'competitions',f5:'weekend',f6:'dinner'}; Object.keys(fillAnswers).forEach(id=>{ total++; const el=document.getElementById(id); const v=(el.value||'').toLowerCase(); const ok=v.includes(fillAnswers[id]); mark(el,ok); if(ok) correct++; }); showMsg(`${correct} of ${total} vocabulary items correct`, correct===total); }
+
+    // Grammar
+    const grammarAnswers = {g1:['gets up','get up'],g2:['goes','go'],g3:['starts','start'],g4:['loves','love'],g5:['takes','take'],g6:['has','have'],g7:['travels','travel'],g8:["doesn't get up","does not get up","doesnt get up","not get up"]};
+    function checkGrammar(){ playClick(); let correct=0,total=0; Object.keys(grammarAnswers).forEach(id=>{ total++; const el=document.getElementById(id); const v=(el.value||'').toLowerCase(); const ok=grammarAnswers[id].some(opt=>v.includes(opt)); mark(el,ok); if(ok) correct++; }); const qps=['qps1','qps2','qps3','qps4','qps5']; qps.forEach(id=>{ total++; const el=document.getElementById(id); if(!el) { total--; return; } const ok=(el.value||'').trim().length>3; mark(el,ok); if(ok) correct++; }); showMsg(`${correct} of ${total} grammar items correct`, correct===total); }
+
+    // Adverbs
+    const adverbAnswers = {a1:['always'],a2:['never'],a3:['always','often'],a4:['sometimes'],a5:['sometimes','early'],a6:['usually']};
+    function checkAdverbs(){ playClick(); let correct=0,total=0; Object.keys(adverbAnswers).forEach(id=>{ total++; const el=document.getElementById(id); const v=(el.value||'').toLowerCase(); const ok=adverbAnswers[id].some(opt=>v.includes(opt)); mark(el,ok); if(ok) correct++; }); const self=document.getElementById('self'); total++; const okSelf=(self.value||'').trim().length>5; mark(self,okSelf); if(okSelf) correct++; showMsg(`${correct} of ${total} adverb items correct`, correct===total); }
+
+    // Check All
+    function checkAll(){ playClick(); checkTF(); checkQuestions(); checkVocab(); checkGrammar(); checkAdverbs(); }
+
+    // Reset All
+    function resetAll(){ if(!confirm('Reset all answers?')) return; document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false); document.querySelectorAll('input[type=text], textarea').forEach(el=>{ el.value=''; el.classList.remove('correct','wrong'); if(el.parentElement) el.parentElement.classList.remove('correct','wrong'); }); document.querySelectorAll('.tf-item').forEach(i=>i.classList.remove('correct','wrong')); showMsg('Worksheet reset!', true); playClick(); }
+
+    // message
+    function showMsg(text,good){ const msg=document.getElementById('message'); msg.textContent=text; msg.className='message '+(good?'good':'bad'); msg.style.display='block'; msg.style.opacity='1'; setTimeout(()=>{ msg.style.opacity='0'; setTimeout(()=>msg.style.display='none',400); },2200); }
+
+    // attach simple click for check buttons (also play sound)
+    document.addEventListener('click', function(e){ if(e.target.matches('.check-btn')||e.target.matches('.btn-start')||e.target.matches('.reset-btn')) playClick(); });
+
+    // keyboard accessibility: allow Enter to check when focused on check button
+    document.addEventListener('keydown', function(e){ if(e.key==='Enter' && document.activeElement && document.activeElement.classList.contains('check-btn')){ document.activeElement.click(); } });
+
+    // If you want a perfectly transparent banner, replace the IMG src with a PNG/SVG that has a true transparent background.
+  </script>
+</body>
+</html>
